@@ -6,33 +6,44 @@
 # See the solution video in the 100 Days of Python Course for explainations.
 
 
-from datetime import datetime
 import pandas
-import random
 import smtplib
-import os
+import datetime
+import random
 
 # import os and use it to get the Github repository secrets
 MY_EMAIL = os.environ.get("MY_EMAIL")
 MY_PASSWORD = os.environ.get("MY_PASSWORD")
 
-today = datetime.now()
-today_tuple = (today.month, today.day)
+def send_email(to_email, content):
+    with smtplib.SMTP("smtp.gmail.com", 587) as connection:
+        connection.starttls()
+        connection.login(user=MY_EMAIL, password=MY_PASSWORD)
+        connection.sendmail(
+            from_addr=my_email,
+            to_addrs=to_email,
+            msg=f"Subject: Happy Birthday\n\n{content}.")
+
+def get_letter(name1):
+    with open(f"letter_templates/letter_{random.randint(1,3)}.txt") as f:
+        initial_letter = f.read()
+        letter = initial_letter.replace("[NAME]", name1)
+        return letter
+
 
 data = pandas.read_csv("birthdays.csv")
-birthdays_dict = {(data_row["month"], data_row["day"])                  : data_row for (index, data_row) in data.iterrows()}
-if today_tuple in birthdays_dict:
-    birthday_person = birthdays_dict[today_tuple]
-    file_path = f"letter_templates/letter_{random.randint(1, 3)}.txt"
-    with open(file_path) as letter_file:
-        contents = letter_file.read()
-        contents = contents.replace("[NAME]", birthday_person["name"])
+all_birthdays = data.to_dict("records")
 
-    with smtplib.SMTP("YOUR EMAIL PROVIDER SMTP SERVER ADDRESS") as connection:
-        connection.starttls()
-        connection.login(MY_EMAIL, MY_PASSWORD)
-        connection.sendmail(
-            from_addr=MY_EMAIL,
-            to_addrs=birthday_person["email"],
-            msg=f"Subject:Happy Birthday!\n\n{contents}"
-        )
+# print(all_birthdays)
+
+today = datetime.datetime.now()
+today_day = today.day
+today_month = today.month
+# print(now_month)
+# print(now_day)
+
+for n in all_birthdays:
+    if n["day"] == today_day and n["month"] == today_month:
+        name = n["name"]
+        email = n["email"]
+        send_email(email, get_letter(name))
