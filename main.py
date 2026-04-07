@@ -1,49 +1,42 @@
-# To run and test the code you need to update 4 places:
-# 1. Change MY_EMAIL/MY_PASSWORD to your own details.
-# 2. Go to your email provider and make it allow less secure apps.
-# 3. Update the SMTP ADDRESS to match your email provider.
-# 4. Update birthdays.csv to contain today's month and day.
-# See the solution video in the 100 Days of Python Course for explainations.
-
+import requests
 import os
-import pandas
-import smtplib
-import datetime
-import random
+from twilio.rest import Client
 
-# import os and use it to get the Github repository secrets
-MY_EMAIL = os.environ.get("MY_EMAIL")
-MY_PASSWORD = os.environ.get("MY_PASSWORD")
+api_key = os.environ.get("OWM_API_KEY")
+account_sid = os.environ.get("ACCOUNT_SID")
+auth_token = os.environ.get("AUTH_TOKEN")
 
-def send_email(to_email, content):
-    with smtplib.SMTP("smtp.gmail.com", 587) as connection:
-        connection.starttls()
-        connection.login(user=MY_EMAIL, password=MY_PASSWORD)
-        connection.sendmail(
-            from_addr=my_email,
-            to_addrs=to_email,
-            msg=f"Subject: Happy Birthday\n\n{content}.")
+endpoint = "https://api.openweathermap.org/data/2.5/forecast"
 
-def get_letter(name1):
-    with open(f"letter_templates/letter_{random.randint(1,3)}.txt") as f:
-        initial_letter = f.read()
-        letter = initial_letter.replace("[NAME]", name1)
-        return letter
+weather_params = {
+    "lat": 50.208017,
+    "lon": 30.543963,
+    "units": "metric",
+    "cnt": 4,
+    "appid": api_key
+}
 
 
-data = pandas.read_csv("birthdays.csv")
-all_birthdays = data.to_dict("records")
+response = requests.get(endpoint, params=weather_params)
+response.raise_for_status()
+response_status = response.status_code
+weather_data = response.json()
+print(response_status)
+print(weather_data)
 
-# print(all_birthdays)
+will_rain = False
 
-today = datetime.datetime.now()
-today_day = today.day
-today_month = today.month
-# print(now_month)
-# print(now_day)
+for item in weather_data["list"]:
+    if item["weather"][0]["id"] < 700:
+        will_rain = True
 
-for n in all_birthdays:
-    if n["day"] == today_day and n["month"] == today_month:
-        name = n["name"]
-        email = n["email"]
-        send_email(email, get_letter(name))
+if will_rain:
+    print("Take an umbrella!")
+    client = Client(account_sid, auth_token)
+    message = client.messages.create(
+        body="It's going to rain today, remember to bring an ☂️",
+        from_="+17405549260",
+        to="+380931192277",
+    )
+    print(message.body)
+    print(message.status)
